@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState, useTransition } from 'react';
+import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import CenteredModal from '@/components/CenteredModal';
 import Spinner from '@/components/Spinner';
 
@@ -14,6 +14,7 @@ export default function GeoGridContent() {
     const [pending, startTransition] = useTransition();
 
     const [query, setQuery] = useState('');
+    const [sortConfig, setSortConfig] = useState<SortConfig>({ column: null, direction: 'asc' });
 
     // The ID of the country for which we are displaying the border modal
     const [selectedBorders, setSelectedBorders] = useState<string | null>(null);
@@ -45,6 +46,51 @@ export default function GeoGridContent() {
         })
     }
 
+    function toggleSort(column: string) {
+        setSortConfig(prev => ({
+            column,
+            direction: prev.column === column && prev.direction === 'asc' ? 'desc' : 'asc'
+        }));
+    }
+
+    const sortedFiltered = useMemo(() => {
+        if (!filtered || !sortConfig.column) return filtered;
+
+        return [...filtered].sort((a, b) => {
+            const getVal = (c: CountryInfo): number | string | null | undefined => {
+                const geo = geogridDataRef.current[c.code];
+                const common = commonDataRef.current[c.code];
+                switch (sortConfig.column) {
+                    case 'name': return c.name;
+                    case 'population': return common?.population;
+                    case 'size': return common?.size;
+                    case 'borders': return geo?.geographyInfo.borderCountOverride ?? common?.borders.length;
+                    case 'hdi': return geo?.economicInfo.HDI;
+                    case 'cpi': return geo?.politicalInfo.CPI;
+                    case 'gdp': return geo?.economicInfo.GDPPerCapita;
+                    case 'coastline': return geo?.geographyInfo.coastlineLength;
+                    case 'airPollution': return geo?.factsInfo.airPollution;
+                    case 'co2': return geo?.factsInfo.co2Emissions;
+                    case 'olympicMedals': return geo?.sportsInfo.olympicMedals;
+                    default: return null;
+                }
+            };
+
+            const aVal = getVal(a);
+            const bVal = getVal(b);
+
+            if (aVal == null && bVal == null) return 0;
+            if (aVal == null) return 1;
+            if (bVal == null) return -1;
+
+            const cmp = typeof aVal === 'string' && typeof bVal === 'string'
+                ? aVal.localeCompare(bVal)
+                : (aVal as number) - (bVal as number);
+
+            return sortConfig.direction === 'asc' ? cmp : -cmp;
+        });
+    }, [filtered, sortConfig]);
+
     return (
         <>
             <div className="container mb-6">
@@ -60,39 +106,19 @@ export default function GeoGridContent() {
             <div className="grow overflow-x-auto flex flex-col">
                 <div className="w-max border-b border-tertiary flex text-xs text-primary items-center break-words">
                     <div className="ml-19 w-36 flex-none mr-3">
-                        Name / code
+                        <SortableColumnHeader label="Name / code" column="name" sortConfig={sortConfig} onSort={toggleSort} />
                     </div>
 
-                    <div className="w-24 flex-none mr-3">
-                        Population
-                    </div>
-                    <div className="w-28 flex-none mr-3">
-                        Size
-                    </div>
-                    <div className="w-28 flex-none mr-3">
-                        Borders
-                    </div>
-                    <div className="w-12 flex-none mr-3">
-                        HDI
-                    </div>
-                    <div className="w-12 flex-none mr-3">
-                        CPI
-                    </div>
-                    <div className="w-16 flex-none mr-3">
-                        GDP / capita
-                    </div>
-                    <div className="w-20 flex-none mr-3">
-                        Coastline length
-                    </div>
-                    <div className="w-24 flex-none mr-3">
-                        Air pollution
-                    </div>
-                    <div className="w-24 flex-none mr-3">
-                        CO₂ emissions / capita
-                    </div>
-                    <div className="w-12 flex-none mr-3">
-                        Olympic medals
-                    </div>
+                    <SortableColumnHeader label="Population" column="population" sortConfig={sortConfig} onSort={toggleSort} className="w-24" />
+                    <SortableColumnHeader label="Size" column="size" sortConfig={sortConfig} onSort={toggleSort} className="w-28" />
+                    <SortableColumnHeader label="Borders" column="borders" sortConfig={sortConfig} onSort={toggleSort} className="w-28" />
+                    <SortableColumnHeader label="HDI" column="hdi" sortConfig={sortConfig} onSort={toggleSort} className="w-12" />
+                    <SortableColumnHeader label="CPI" column="cpi" sortConfig={sortConfig} onSort={toggleSort} className="w-12" />
+                    <SortableColumnHeader label="GDP / capita" column="gdp" sortConfig={sortConfig} onSort={toggleSort} className="w-16" />
+                    <SortableColumnHeader label="Coastline length" column="coastline" sortConfig={sortConfig} onSort={toggleSort} className="w-20" />
+                    <SortableColumnHeader label="Air pollution" column="airPollution" sortConfig={sortConfig} onSort={toggleSort} className="w-24" />
+                    <SortableColumnHeader label="CO₂ emissions / capita" column="co2" sortConfig={sortConfig} onSort={toggleSort} className="w-24" />
+                    <SortableColumnHeader label="Olympic medals" column="olympicMedals" sortConfig={sortConfig} onSort={toggleSort} className="w-12" />
                     <div className="w-14 flex-none mr-3">
                         Continent(s)
                     </div>
@@ -144,7 +170,7 @@ export default function GeoGridContent() {
                     </div>
                 ) : (
                     <div className={'grow w-max bg-black/25 flex flex-col overflow-y-auto divide-y divide-tertiary transition duration-200' + (pending ? ' opacity-50' : '')}>
-                        {filtered.map((c) => {
+                        {sortedFiltered!.map((c) => {
                             const geogridDetails = geogridDataRef.current[c.code];
                             const commonDetails = commonDataRef.current[c.code];
 
@@ -298,6 +324,33 @@ export default function GeoGridContent() {
                 )}
             </CenteredModal>
         </>
+    )
+}
+
+type SortConfig = {
+    column: string | null,
+    direction: 'asc' | 'desc'
+}
+
+type SortableColumnHeaderProps = {
+    label: string,
+    column: string,
+    sortConfig: SortConfig,
+    onSort: (col: string) => void,
+    className?: string
+}
+function SortableColumnHeader({ label, column, sortConfig, onSort, className }: SortableColumnHeaderProps) {
+    const isActive = sortConfig.column === column;
+    return (
+        <button
+            className={`${className ?? ''} flex-none mr-3 text-left flex items-center gap-0.5 hover:text-white transition duration-150 cursor-pointer`}
+            onClick={() => onSort(column)}
+        >
+            <span>{label}</span>
+            <span className={'text-secondary ' + (isActive ? 'text-white' : '')}>
+                {isActive ? (sortConfig.direction === 'asc' ? ' ↑' : ' ↓') : ' ↕'}
+            </span>
+        </button>
     )
 }
 
