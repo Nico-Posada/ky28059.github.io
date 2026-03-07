@@ -64,7 +64,7 @@ export default function GeoGridContent() {
                     case 'name': return c.name;
                     case 'population': return common?.population;
                     case 'size': return common?.size;
-                    case 'borders': return geo?.geographyInfo.borderCountOverride ?? common?.borders.length;
+                    case 'borders': return geo?.geographyInfo.borderCountOverride ?? (geo?.geographyInfo.islandNation ? 0 : common?.borders.length);
                     case 'hdi': return geo?.economicInfo.HDI;
                     case 'cpi': return geo?.politicalInfo.CPI;
                     case 'gdp': return geo?.economicInfo.GDPPerCapita;
