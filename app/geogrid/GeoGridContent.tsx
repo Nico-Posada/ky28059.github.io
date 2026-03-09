@@ -149,9 +149,11 @@ export default function GeoGridContent() {
 
             <div className="grow overflow-x-auto flex flex-col">
                 <div className="w-max border-b border-tertiary flex text-xs text-primary items-center break-words">
-                    <div className="w-8 flex-none text-center">#</div>
-                    <div className="ml-19 w-36 flex-none mr-3">
-                        <SortableColumnHeader label="Name / code" column="name" sortConfig={sortConfig} onSort={toggleSort} />
+                    <div className="sticky left-0 z-10 bg-midnight flex items-center flex-none">
+                        <div className="w-8 flex-none text-center">#</div>
+                        <div className="ml-19 w-36 flex-none mr-3">
+                            <SortableColumnHeader label="Name / code" column="name" sortConfig={sortConfig} onSort={toggleSort} />
+                        </div>
                     </div>
 
                     <SortableColumnHeader label="Population" column="population" sortConfig={sortConfig} onSort={toggleSort} className="w-24" />
@@ -222,16 +224,18 @@ export default function GeoGridContent() {
                                     className="flex text-sm items-center hover:bg-tertiary/30"
                                     key={c.code}
                                 >
-                                    <div className="w-8 flex-none text-center text-xs text-secondary">
-                                        {i + 1}
-                                    </div>
-                                    <img
-                                        className="max-h-12 w-16 flex-none object-contain object-right py-0.5 mr-3"
-                                        src={getFlagUrl(c.code)}
-                                        alt={c.name}
-                                    />
-                                    <div className="w-36 flex-none mr-3 text-pretty">
-                                        {c.name} <span className="text-secondary">({c.code})</span>
+                                    <div className="sticky left-0 z-10 bg-[#141414] flex items-center flex-none">
+                                        <div className="w-8 flex-none text-center text-xs text-secondary">
+                                            {i + 1}
+                                        </div>
+                                        <img
+                                            className="max-h-12 w-16 flex-none object-contain object-right py-0.5 mr-3"
+                                            src={getFlagUrl(c.code)}
+                                            alt={c.name}
+                                        />
+                                        <div className="w-36 flex-none mr-3 text-pretty">
+                                            {c.name} <span className="text-secondary">({c.code})</span>
+                                        </div>
                                     </div>
                                     <GridCell
                                         className="w-24"
