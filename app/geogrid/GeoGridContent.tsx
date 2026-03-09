@@ -53,14 +53,6 @@ export default function GeoGridContent() {
         void fetchData();
     }, []);
 
-    function updateQuery(query: string) {
-        setQuery(query);
-        startTransition(() => {
-            if (!countryRef.current) return;
-            setFiltered(countryRef.current.filter(c => c.name.toLowerCase().includes(query.toLowerCase())));
-        })
-    }
-
     function toggleSort(column: string) {
         setSort(prev => ({
             column,
@@ -68,43 +60,45 @@ export default function GeoGridContent() {
         }));
     }
 
-    const sorted = useMemo(() => {
-        if (!filtered || !sort.column) return filtered;
+    useEffect(() => {
+        startTransition(() => {
+            if (!countryRef.current) return;
 
-        return [...filtered].sort((a, b) => {
-            const getVal = (c: CountryInfo) => {
-                const geo = geogridDataRef.current[c.code];
-                const common = commonDataRef.current[c.code];
-                switch (sort.column) {
-                    case 'name': return c.name;
-                    case 'population': return common?.population;
-                    case 'size': return common?.size;
-                    case 'borders': return geo?.geographyInfo.borderCountOverride ?? (geo?.geographyInfo.islandNation ? 0 : common?.borders.length);
-                    case 'hdi': return geo?.economicInfo.HDI;
-                    case 'cpi': return geo?.politicalInfo.CPI;
-                    case 'gdp': return geo?.economicInfo.GDPPerCapita;
-                    case 'coastline': return geo?.geographyInfo.coastlineLength;
-                    case 'airPollution': return geo?.factsInfo.airPollution;
-                    case 'co2': return geo?.factsInfo.co2Emissions;
-                    case 'olympicMedals': return geo?.sportsInfo.olympicMedals;
-                    default: return null;
-                }
-            };
+            setSorted(countryRef.current.filter(c => c.name.toLowerCase().includes(query.toLowerCase())).sort((a, b) => {
+                const getVal = (c: CountryInfo) => {
+                    const geo = geogridDataRef.current[c.code];
+                    const common = commonDataRef.current[c.code];
+                    switch (sort.column) {
+                        case 'name': return c.name;
+                        case 'population': return common?.population;
+                        case 'size': return common?.size;
+                        case 'borders': return geo?.geographyInfo.borderCountOverride ?? (geo?.geographyInfo.islandNation ? 0 : common?.borders.length);
+                        case 'hdi': return geo?.economicInfo.HDI;
+                        case 'cpi': return geo?.politicalInfo.CPI;
+                        case 'gdp': return geo?.economicInfo.GDPPerCapita;
+                        case 'coastline': return geo?.geographyInfo.coastlineLength;
+                        case 'airPollution': return geo?.factsInfo.airPollution;
+                        case 'co2': return geo?.factsInfo.co2Emissions;
+                        case 'olympicMedals': return geo?.sportsInfo.olympicMedals;
+                        default: return null;
+                    }
+                };
 
-            const aVal = getVal(a);
-            const bVal = getVal(b);
+                const aVal = getVal(a);
+                const bVal = getVal(b);
 
-            if (aVal == null && bVal == null) return 0;
-            if (aVal == null) return 1;
-            if (bVal == null) return -1;
+                if (aVal == null && bVal == null) return 0;
+                if (aVal == null) return 1;
+                if (bVal == null) return -1;
 
-            const cmp = typeof aVal === 'string' && typeof bVal === 'string'
-                ? aVal.localeCompare(bVal)
-                : (aVal as number) - (bVal as number);
+                const cmp = typeof aVal === 'string' && typeof bVal === 'string'
+                    ? aVal.localeCompare(bVal)
+                    : (aVal as number) - (bVal as number);
 
-            return sort.direction === 'asc' ? cmp : -cmp;
-        });
-    }, [filtered, sort]);
+                return sort.direction === 'asc' ? cmp : -cmp;
+            }));
+        })
+    }, [query, sort]);
 
     return (
         <>
@@ -112,8 +106,8 @@ export default function GeoGridContent() {
                 <input
                     className="disabled:opacity-50 transition duration-200 rounded px-3.5 py-1.5 text-sm border border-tertiary focus:outline-none focus:ring-2"
                     value={query}
-                    onChange={(e) => updateQuery(e.target.value)}
-                    disabled={!filtered}
+                    onChange={(e) => setQuery(e.target.value)}
+                    disabled={!sorted}
                     placeholder="Filter by country"
                 />
             </div>
