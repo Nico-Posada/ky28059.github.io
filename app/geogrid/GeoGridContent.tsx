@@ -147,9 +147,9 @@ export default function GeoGridContent() {
                 />
             </div>
 
-            <div className="grow overflow-x-auto flex flex-col">
-                <div className="w-max border-b border-tertiary flex text-xs text-primary items-center break-words">
-                    <div className="sticky left-0 z-10 bg-midnight flex items-center flex-none">
+            <div className="grow overflow-auto">
+                <div className="w-max border-b border-tertiary flex text-xs text-primary items-center break-words sticky top-0 z-20 bg-midnight">
+                    <div className="sticky left-0 z-30 bg-midnight flex items-center flex-none self-stretch">
                         <div className="w-8 flex-none text-center">#</div>
                         <div className="ml-19 w-36 flex-none mr-3">
                             <SortableColumnHeader label="Name / code" column="name" sortConfig={sortConfig} onSort={toggleSort} />
@@ -214,7 +214,7 @@ export default function GeoGridContent() {
                         <Spinner />
                     </div>
                 ) : (
-                    <div className={'grow w-max bg-black/25 flex flex-col overflow-y-auto divide-y divide-tertiary transition duration-200' + (pending ? ' opacity-50' : '')}>
+                    <div className={'w-max bg-black/25 flex flex-col divide-y divide-tertiary transition duration-200' + (pending ? ' opacity-50' : '')}>
                         {sortedFiltered!.map((c, i) => {
                             const geogridDetails = geogridDataRef.current[c.code];
                             const commonDetails = commonDataRef.current[c.code];
