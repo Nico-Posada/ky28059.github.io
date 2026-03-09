@@ -1,8 +1,23 @@
 'use client'
 
 import { useEffect, useRef, useState, useTransition } from 'react';
+
+// Components
 import CenteredModal from '@/components/CenteredModal';
 import Spinner from '@/components/Spinner';
+
+// Utils
+import {
+    CommonCountryDetails,
+    CountryInfo,
+    fetchCommonData,
+    fetchCountries,
+    fetchGeogridData, GeogridCountryDetails,
+    getFlagUrl
+} from '@/app/geogrid/api';
+
+// Icons
+import { FaArrowUp, FaArrowDown, FaArrowsUpDown } from 'react-icons/fa6';
 
 
 export default function GeoGridContent() {
@@ -10,10 +25,11 @@ export default function GeoGridContent() {
     const geogridDataRef = useRef<{ [code: string]: GeogridCountryDetails }>({});
     const commonDataRef = useRef<{ [code: string]: CommonCountryDetails }>({});
 
-    const [filtered, setFiltered] = useState<CountryInfo[] | null>(null);
+    const [sorted, setSorted] = useState<CountryInfo[] | null>(null);
     const [pending, startTransition] = useTransition();
 
     const [query, setQuery] = useState('');
+    const [sort, setSort] = useState<SortConfig>({ column: null, direction: 'asc' });
 
     // The ID of the country for which we are displaying the border modal
     const [selectedBorders, setSelectedBorders] = useState<string | null>(null);
@@ -31,19 +47,58 @@ export default function GeoGridContent() {
             geogridDataRef.current = Object.fromEntries(geogrid.map((d, i) => [countries[i].code, d]));
             commonDataRef.current = Object.fromEntries(common.map((d, i) => [countries[i].code, d]));
 
-            setFiltered(countries);
+            setSorted(countries);
         }
 
         void fetchData();
     }, []);
 
-    function updateQuery(query: string) {
-        setQuery(query);
+    function toggleSort(column: string) {
+        setSort(prev => ({
+            column,
+            direction: prev.column === column && prev.direction === 'asc' ? 'desc' : 'asc'
+        }));
+    }
+
+    useEffect(() => {
         startTransition(() => {
             if (!countryRef.current) return;
-            setFiltered(countryRef.current.filter(c => c.name.toLowerCase().includes(query.toLowerCase())));
+
+            setSorted(countryRef.current.filter(c => c.name.toLowerCase().includes(query.toLowerCase())).sort((a, b) => {
+                const getVal = (c: CountryInfo) => {
+                    const geo = geogridDataRef.current[c.code];
+                    const common = commonDataRef.current[c.code];
+                    switch (sort.column) {
+                        case 'name': return c.name;
+                        case 'population': return common?.population;
+                        case 'size': return common?.size;
+                        case 'borders': return geo?.geographyInfo.borderCountOverride ?? (geo?.geographyInfo.islandNation ? 0 : common?.borders.length);
+                        case 'hdi': return geo?.economicInfo.HDI;
+                        case 'cpi': return geo?.politicalInfo.CPI;
+                        case 'gdp': return geo?.economicInfo.GDPPerCapita;
+                        case 'coastline': return geo?.geographyInfo.coastlineLength;
+                        case 'airPollution': return geo?.factsInfo.airPollution;
+                        case 'co2': return geo?.factsInfo.co2Emissions;
+                        case 'olympicMedals': return geo?.sportsInfo.olympicMedals;
+                        default: return null;
+                    }
+                };
+
+                const aVal = getVal(a);
+                const bVal = getVal(b);
+
+                if (aVal == null && bVal == null) return 0;
+                if (aVal == null) return 1;
+                if (bVal == null) return -1;
+
+                const cmp = typeof aVal === 'string' && typeof bVal === 'string'
+                    ? aVal.localeCompare(bVal)
+                    : (aVal as number) - (bVal as number);
+
+                return sort.direction === 'asc' ? cmp : -cmp;
+            }));
         })
-    }
+    }, [query, sort]);
 
     return (
         <>
@@ -51,55 +106,32 @@ export default function GeoGridContent() {
                 <input
                     className="disabled:opacity-50 transition duration-200 rounded px-3.5 py-1.5 text-sm border border-tertiary focus:outline-none focus:ring-2"
                     value={query}
-                    onChange={(e) => updateQuery(e.target.value)}
-                    disabled={!filtered}
+                    onChange={(e) => setQuery(e.target.value)}
+                    disabled={!sorted}
                     placeholder="Filter by country"
                 />
             </div>
 
             <div className="grow overflow-x-auto flex flex-col">
                 <div className="w-max border-b border-tertiary flex text-xs text-primary items-center break-words">
-                    <div className="ml-19 w-36 flex-none mr-3">
-                        Name / code
-                    </div>
-
-                    <div className="w-24 flex-none mr-3">
-                        Population
-                    </div>
-                    <div className="w-28 flex-none mr-3">
-                        Size
-                    </div>
-                    <div className="w-28 flex-none mr-3">
-                        Borders
-                    </div>
-                    <div className="w-12 flex-none mr-3">
-                        HDI
-                    </div>
-                    <div className="w-12 flex-none mr-3">
-                        CPI
-                    </div>
-                    <div className="w-16 flex-none mr-3">
-                        GDP / capita
-                    </div>
-                    <div className="w-20 flex-none mr-3">
-                        Coastline length
-                    </div>
-                    <div className="w-24 flex-none mr-3">
-                        Air pollution
-                    </div>
-                    <div className="w-24 flex-none mr-3">
-                        CO₂ emissions / capita
-                    </div>
-                    <div className="w-12 flex-none mr-3">
-                        Olympic medals
-                    </div>
-                    <div className="w-14 flex-none mr-3">
+                    <SortableColumnHeader label="Name / code" column="name" sort={sort} onSort={toggleSort} className="ml-17.5 w-36" />
+                    <SortableColumnHeader label="Population" column="population" sort={sort} onSort={toggleSort} className="w-24" />
+                    <SortableColumnHeader label="Size" column="size" sort={sort} onSort={toggleSort} className="w-28" />
+                    <SortableColumnHeader label="Borders" column="borders" sort={sort} onSort={toggleSort} className="w-28" />
+                    <SortableColumnHeader label="HDI" column="hdi" sort={sort} onSort={toggleSort} className="w-12" />
+                    <SortableColumnHeader label="CPI" column="cpi" sort={sort} onSort={toggleSort} className="w-12" />
+                    <SortableColumnHeader label="GDP / capita" column="gdp" sort={sort} onSort={toggleSort} className="w-16" />
+                    <SortableColumnHeader label="Coastline length" column="coastline" sort={sort} onSort={toggleSort} className="w-20" />
+                    <SortableColumnHeader label="Air pollution" column="airPollution" sort={sort} onSort={toggleSort} className="w-24" />
+                    <SortableColumnHeader label="CO₂ emissions / capita" column="co2" sort={sort} onSort={toggleSort} className="w-24" />
+                    <SortableColumnHeader label="Olympic medals" column="olympicMedals" sort={sort} onSort={toggleSort} className="w-14" />
+                    <div className="px-1.5 w-14 flex-none mr-3">
                         Continent(s)
                     </div>
-                    <div className="w-20 flex-none mr-3">
+                    <div className="px-1.5 w-20 flex-none mr-3">
                         River systems
                     </div>
-                    <div className="w-20 flex-none mr-3">
+                    <div className="px-1.5 w-20 flex-none mr-3">
                         Official lang(s)
                     </div>
                     <GridBooleanLabel label="Landlocked" />
@@ -138,13 +170,13 @@ export default function GeoGridContent() {
                     <GridBooleanLabel label="T20 choc." />
                 </div>
 
-                {!filtered ? (
+                {!sorted ? (
                     <div className="w-screen h-full flex items-center justify-center sticky left-0">
                         <Spinner />
                     </div>
                 ) : (
                     <div className={'grow w-max bg-black/25 flex flex-col overflow-y-auto divide-y divide-tertiary transition duration-200' + (pending ? ' opacity-50' : '')}>
-                        {filtered.map((c) => {
+                        {sorted.map((c) => {
                             const geogridDetails = geogridDataRef.current[c.code];
                             const commonDetails = commonDataRef.current[c.code];
 
@@ -213,7 +245,7 @@ export default function GeoGridContent() {
                                         unit="tCO₂/y"
                                     />
                                     <GridCell
-                                        className="w-12"
+                                        className="w-14"
                                         value={geogridDetails?.sportsInfo.olympicMedals}
                                     />
                                     <GridArrayCell
@@ -301,6 +333,40 @@ export default function GeoGridContent() {
     )
 }
 
+type SortConfig = {
+    column: string | null,
+    direction: 'asc' | 'desc'
+}
+
+type SortableColumnHeaderProps = {
+    label: string,
+    column: string,
+    sort: SortConfig,
+    onSort: (col: string) => void,
+    className?: string
+}
+function SortableColumnHeader({ label, column, sort, onSort, className }: SortableColumnHeaderProps) {
+    const active = sort.column === column;
+    return (
+        <button
+            className={`${className ?? ''} self-stretch flex-none px-1.5 box-content text-left flex items-center gap-0.5 hover:text-white hover:bg-white/5 transition duration-150 cursor-pointer` + (active ? ' text-white' : '')}
+            onClick={() => onSort(column)}
+        >
+            <span>{label}</span>
+
+            <span className={'ml-auto' + (active ? '' : ' opacity-50')}>
+                {!active ? (
+                    <FaArrowsUpDown />
+                ) : sort.direction === 'asc' ? (
+                    <FaArrowUp />
+                ) : (
+                    <FaArrowDown />
+                )}
+            </span>
+        </button>
+    )
+}
+
 type GridCellProps = {
     value: string | number | null | undefined,
     prefix?: string,
@@ -374,138 +440,6 @@ function GridBooleanLabel(props: GridBooleanLabelProps) {
             {props.label}
         </div>
     )
-}
-
-type CountryInfo = {
-    code: string,
-    name: string,
-    longitude: number,
-    latitude: number,
-    names: { [lang: string]: string }
-}
-
-type GeogridCountryDetails = {
-    flagInfo: {
-        colorsOnFlag: string[],
-        hasStar: boolean,
-        hasCoatOfArms: boolean,
-        hasAnimal: boolean
-    },
-    geographyInfo: {
-        islandNation: boolean, //
-        landlocked: boolean, //
-        coastlineLength: number, //
-        coastline: string[],
-        touchesSahara: boolean, //
-        borderCountOverride: number,
-        rivers: string[], //
-        touchesEurasionSteppe: boolean, //
-        touchesEquator: boolean, //
-        top10Lakes: boolean //
-    },
-    economicInfo: {
-        HDI?: number, //
-        GDPPerCapita?: number, //
-        top20WheatProduction: boolean, //
-        top20OilProduction: boolean, //
-        top20RenewableElectricityProduction: boolean, //
-        producesNuclearPower: boolean //
-    },
-    politicalInfo: {
-        isMonarchy: boolean, //
-        inEU: boolean, //
-        hasNuclearWeapons: boolean, //
-        wasUSSR: boolean, //
-        inCommonwealth: boolean, //
-        officialLanguageCodes?: string[], //
-        timeZones: string[],
-        observesDST: boolean, //
-        sameSexMarriageLegal: boolean, //
-        sameSexActivitiesIllegal: boolean, //
-        CPI: number | null, //
-        isTerritory: boolean
-    },
-    sportsInfo: {
-        olympicMedals: number, //
-        hostedF1: boolean, //
-        hostedOlympics: boolean, //
-        hostedMensWorldCup: boolean, //
-        playedMensWorldCup: boolean, //
-        wonMensWorldCup: boolean //
-    },
-    factsInfo: {
-        drivesLeft: boolean, //
-        hasAlcoholBan: boolean, //
-        has50Skyscrapers: boolean, //
-        top20ObesityRate: boolean, //
-        top20ChocolateConsumption: boolean, //
-        top20AlcoholConsumption: boolean, //
-        top20PopulationDensity: boolean, //
-        bottom20PopulationDensity: boolean, //
-        top20TourismRate: boolean, //
-        top20RailSize: boolean, //
-        top20WorldHeritageSites: boolean, //
-        airPollution: number, //
-        co2Emissions: number //
-    }
-}
-
-type CommonCountryDetails = {
-    code: string,
-    latitude: number,
-    longitude: number,
-    name: string,
-    names: { [code: string]: string },
-    flags: string[], // For worldle
-    continent: string[],
-    borders: string[], // Country codes
-    autoUpdateBorders: true,
-    links: {
-        type: 'GoogleMaps' | 'Wikipedia',
-        url: string, // Includes ${cc}
-        languageCode: "en"
-    }[],
-    currencyData: {
-        code: string,
-        name: string,
-        nameChoices: string[], // For worldle
-    },
-    population: number,
-    size: number,
-    languageData: {
-        languageSources: { title: string, url: string }[],
-        languages: { languageCode: string, percentage: number }[]
-    },
-    productData: {
-        year: number,
-        totalValue: number,
-        topExports: {
-            productCode: string, // numerical ID
-            value: number
-        }[]
-    },
-    borderMode: "bordering",
-    images: { imageCode: number, sourceLink: number }[],
-    difficulty: 'easy' | 'hard'
-}
-
-async function fetchCountries(): Promise<CountryInfo[]> {
-    const res = await fetch('https://cdn-assets.teuteuf.fr/data/common/countries.json');
-    return res.json();
-}
-
-async function fetchGeogridData(code: string): Promise<GeogridCountryDetails> {
-    const res = await fetch(`https://cdn-assets.teuteuf.fr/data/geogrid/countries/${code.toLowerCase()}.json`);
-    return res.json();
-}
-
-async function fetchCommonData(code: string): Promise<CommonCountryDetails> {
-    const res = await fetch(`https://cdn-assets.teuteuf.fr/data/common/countries/${code.toLowerCase()}.json`);
-    return res.json();
-}
-
-function getFlagUrl(code: string) {
-    return `https://cdn-assets.teuteuf.fr/data/common/flags/${code.toLowerCase()}.svg`;
 }
 
 // https://stackoverflow.com/a/2901298
