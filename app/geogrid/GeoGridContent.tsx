@@ -1,8 +1,13 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
+
+// Components
 import CenteredModal from '@/components/CenteredModal';
 import Spinner from '@/components/Spinner';
+
+// Icons
+import { FaArrowUp, FaArrowDown, FaArrowsUpDown } from 'react-icons/fa6';
 
 
 export default function GeoGridContent() {
@@ -14,7 +19,7 @@ export default function GeoGridContent() {
     const [pending, startTransition] = useTransition();
 
     const [query, setQuery] = useState('');
-    const [sortConfig, setSortConfig] = useState<SortConfig>({ column: null, direction: 'asc' });
+    const [sort, setSort] = useState<SortConfig>({ column: null, direction: 'asc' });
 
     // The ID of the country for which we are displaying the border modal
     const [selectedBorders, setSelectedBorders] = useState<string | null>(null);
@@ -47,20 +52,20 @@ export default function GeoGridContent() {
     }
 
     function toggleSort(column: string) {
-        setSortConfig(prev => ({
+        setSort(prev => ({
             column,
             direction: prev.column === column && prev.direction === 'asc' ? 'desc' : 'asc'
         }));
     }
 
-    const sortedFiltered = useMemo(() => {
-        if (!filtered || !sortConfig.column) return filtered;
+    const sorted = useMemo(() => {
+        if (!filtered || !sort.column) return filtered;
 
         return [...filtered].sort((a, b) => {
-            const getVal = (c: CountryInfo): number | string | null | undefined => {
+            const getVal = (c: CountryInfo) => {
                 const geo = geogridDataRef.current[c.code];
                 const common = commonDataRef.current[c.code];
-                switch (sortConfig.column) {
+                switch (sort.column) {
                     case 'name': return c.name;
                     case 'population': return common?.population;
                     case 'size': return common?.size;
@@ -87,9 +92,9 @@ export default function GeoGridContent() {
                 ? aVal.localeCompare(bVal)
                 : (aVal as number) - (bVal as number);
 
-            return sortConfig.direction === 'asc' ? cmp : -cmp;
+            return sort.direction === 'asc' ? cmp : -cmp;
         });
-    }, [filtered, sortConfig]);
+    }, [filtered, sort]);
 
     return (
         <>
@@ -105,27 +110,24 @@ export default function GeoGridContent() {
 
             <div className="grow overflow-x-auto flex flex-col">
                 <div className="w-max border-b border-tertiary flex text-xs text-primary items-center break-words">
-                    <div className="ml-19 w-36 flex-none mr-3">
-                        <SortableColumnHeader label="Name / code" column="name" sortConfig={sortConfig} onSort={toggleSort} />
-                    </div>
-
-                    <SortableColumnHeader label="Population" column="population" sortConfig={sortConfig} onSort={toggleSort} className="w-24" />
-                    <SortableColumnHeader label="Size" column="size" sortConfig={sortConfig} onSort={toggleSort} className="w-28" />
-                    <SortableColumnHeader label="Borders" column="borders" sortConfig={sortConfig} onSort={toggleSort} className="w-28" />
-                    <SortableColumnHeader label="HDI" column="hdi" sortConfig={sortConfig} onSort={toggleSort} className="w-12" />
-                    <SortableColumnHeader label="CPI" column="cpi" sortConfig={sortConfig} onSort={toggleSort} className="w-12" />
-                    <SortableColumnHeader label="GDP / capita" column="gdp" sortConfig={sortConfig} onSort={toggleSort} className="w-16" />
-                    <SortableColumnHeader label="Coastline length" column="coastline" sortConfig={sortConfig} onSort={toggleSort} className="w-20" />
-                    <SortableColumnHeader label="Air pollution" column="airPollution" sortConfig={sortConfig} onSort={toggleSort} className="w-24" />
-                    <SortableColumnHeader label="CO₂ emissions / capita" column="co2" sortConfig={sortConfig} onSort={toggleSort} className="w-24" />
-                    <SortableColumnHeader label="Olympic medals" column="olympicMedals" sortConfig={sortConfig} onSort={toggleSort} className="w-12" />
-                    <div className="w-14 flex-none mr-3">
+                    <SortableColumnHeader label="Name / code" column="name" sort={sort} onSort={toggleSort} className="ml-17.5 w-36" />
+                    <SortableColumnHeader label="Population" column="population" sort={sort} onSort={toggleSort} className="w-24" />
+                    <SortableColumnHeader label="Size" column="size" sort={sort} onSort={toggleSort} className="w-28" />
+                    <SortableColumnHeader label="Borders" column="borders" sort={sort} onSort={toggleSort} className="w-28" />
+                    <SortableColumnHeader label="HDI" column="hdi" sort={sort} onSort={toggleSort} className="w-12" />
+                    <SortableColumnHeader label="CPI" column="cpi" sort={sort} onSort={toggleSort} className="w-12" />
+                    <SortableColumnHeader label="GDP / capita" column="gdp" sort={sort} onSort={toggleSort} className="w-16" />
+                    <SortableColumnHeader label="Coastline length" column="coastline" sort={sort} onSort={toggleSort} className="w-20" />
+                    <SortableColumnHeader label="Air pollution" column="airPollution" sort={sort} onSort={toggleSort} className="w-24" />
+                    <SortableColumnHeader label="CO₂ emissions / capita" column="co2" sort={sort} onSort={toggleSort} className="w-24" />
+                    <SortableColumnHeader label="Olympic medals" column="olympicMedals" sort={sort} onSort={toggleSort} className="w-14" />
+                    <div className="px-1.5 w-14 flex-none mr-3">
                         Continent(s)
                     </div>
-                    <div className="w-20 flex-none mr-3">
+                    <div className="px-1.5 w-20 flex-none mr-3">
                         River systems
                     </div>
-                    <div className="w-20 flex-none mr-3">
+                    <div className="px-1.5 w-20 flex-none mr-3">
                         Official lang(s)
                     </div>
                     <GridBooleanLabel label="Landlocked" />
@@ -164,13 +166,13 @@ export default function GeoGridContent() {
                     <GridBooleanLabel label="T20 choc." />
                 </div>
 
-                {!filtered ? (
+                {!sorted ? (
                     <div className="w-screen h-full flex items-center justify-center sticky left-0">
                         <Spinner />
                     </div>
                 ) : (
                     <div className={'grow w-max bg-black/25 flex flex-col overflow-y-auto divide-y divide-tertiary transition duration-200' + (pending ? ' opacity-50' : '')}>
-                        {sortedFiltered!.map((c) => {
+                        {sorted.map((c) => {
                             const geogridDetails = geogridDataRef.current[c.code];
                             const commonDetails = commonDataRef.current[c.code];
 
@@ -239,7 +241,7 @@ export default function GeoGridContent() {
                                         unit="tCO₂/y"
                                     />
                                     <GridCell
-                                        className="w-12"
+                                        className="w-14"
                                         value={geogridDetails?.sportsInfo.olympicMedals}
                                     />
                                     <GridArrayCell
@@ -335,20 +337,27 @@ type SortConfig = {
 type SortableColumnHeaderProps = {
     label: string,
     column: string,
-    sortConfig: SortConfig,
+    sort: SortConfig,
     onSort: (col: string) => void,
     className?: string
 }
-function SortableColumnHeader({ label, column, sortConfig, onSort, className }: SortableColumnHeaderProps) {
-    const isActive = sortConfig.column === column;
+function SortableColumnHeader({ label, column, sort, onSort, className }: SortableColumnHeaderProps) {
+    const active = sort.column === column;
     return (
         <button
-            className={`${className ?? ''} flex-none mr-3 text-left flex items-center gap-0.5 hover:text-white transition duration-150 cursor-pointer`}
+            className={`${className ?? ''} self-stretch flex-none px-1.5 box-content text-left flex items-center gap-0.5 hover:text-white hover:bg-white/5 transition duration-150 cursor-pointer` + (active ? ' text-white' : '')}
             onClick={() => onSort(column)}
         >
             <span>{label}</span>
-            <span className={'text-secondary ' + (isActive ? 'text-white' : '')}>
-                {isActive ? (sortConfig.direction === 'asc' ? ' ↑' : ' ↓') : ' ↕'}
+
+            <span className={'ml-auto' + (active ? '' : ' opacity-50')}>
+                {!active ? (
+                    <FaArrowsUpDown />
+                ) : sort.direction === 'asc' ? (
+                    <FaArrowUp />
+                ) : (
+                    <FaArrowDown />
+                )}
             </span>
         </button>
     )
