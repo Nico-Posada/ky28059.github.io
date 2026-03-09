@@ -169,6 +169,9 @@ export default function GeoGridContent() {
                     <div className="w-14 flex-none mr-3">
                         Continent(s)
                     </div>
+                    <div className="w-24 flex-none mr-3">
+                        Coastline (oceans)
+                    </div>
                     <SortableColumnHeader label="River systems" column="rivers" sortConfig={sortConfig} onSort={toggleSort} className="w-20 text-xs" />
                     <div className="w-20 flex-none mr-3">
                         Official lang(s)
@@ -221,10 +224,10 @@ export default function GeoGridContent() {
 
                             return (
                                 <div
-                                    className="flex text-sm items-center hover:bg-tertiary/30"
+                                    className="flex text-sm items-center bg-[#141414] hover:bg-[#1f1f1f]"
                                     key={c.code}
                                 >
-                                    <div className="sticky left-0 z-10 bg-[#141414] flex items-center flex-none">
+                                    <div className="sticky left-0 z-10 bg-inherit flex items-center flex-none">
                                         <div className="w-8 flex-none text-center text-xs text-secondary">
                                             {i + 1}
                                         </div>
@@ -295,6 +298,10 @@ export default function GeoGridContent() {
                                     <GridArrayCell
                                         className="w-14 text-xs"
                                         value={commonDetails?.continent}
+                                    />
+                                    <GridArrayCell
+                                        className="w-24 text-xs"
+                                        value={geogridDetails?.geographyInfo.coastline}
                                     />
                                     <GridArrayCell
                                         className="w-20 text-xs"
