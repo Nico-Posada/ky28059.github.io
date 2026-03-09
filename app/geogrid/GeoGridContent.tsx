@@ -57,7 +57,7 @@ export default function GeoGridContent() {
         if (!filtered || !sortConfig.column) return filtered;
 
         return [...filtered].sort((a, b) => {
-            const getVal = (c: CountryInfo): number | string | null | undefined => {
+            const getVal = (c: CountryInfo): number | string | boolean | null | undefined => {
                 const geo = geogridDataRef.current[c.code];
                 const common = commonDataRef.current[c.code];
                 switch (sortConfig.column) {
@@ -72,6 +72,41 @@ export default function GeoGridContent() {
                     case 'airPollution': return geo?.factsInfo.airPollution;
                     case 'co2': return geo?.factsInfo.co2Emissions;
                     case 'olympicMedals': return geo?.sportsInfo.olympicMedals;
+                    case 'rivers': return geo?.geographyInfo.rivers?.join(', ') ?? '';
+                    case 'landlocked': return geo?.geographyInfo.landlocked;
+                    case 'islandNation': return geo?.geographyInfo.islandNation;
+                    case 'monarchy': return geo?.politicalInfo.isMonarchy;
+                    case 'eu': return geo?.politicalInfo.inEU;
+                    case 'commonwealth': return geo?.politicalInfo.inCommonwealth;
+                    case 'ussr': return geo?.politicalInfo.wasUSSR;
+                    case 'nuclearPower': return geo?.economicInfo.producesNuclearPower;
+                    case 'nuclearWeapons': return geo?.politicalInfo.hasNuclearWeapons;
+                    case 'dst': return geo?.politicalInfo.observesDST;
+                    case 'ssmLegal': return geo?.politicalInfo.sameSexMarriageLegal;
+                    case 'ssaIllegal': return geo?.politicalInfo.sameSexActivitiesIllegal;
+                    case 'drivesLeft': return geo?.factsInfo.drivesLeft;
+                    case 'alcoholBan': return geo?.factsInfo.hasAlcoholBan;
+                    case 'touchesSahara': return geo?.geographyInfo.touchesSahara;
+                    case 'touchesEquator': return geo?.geographyInfo.touchesEquator;
+                    case 'touchesSteppe': return geo?.geographyInfo.touchesEurasionSteppe;
+                    case 'hostedF1': return geo?.sportsInfo.hostedF1;
+                    case 'hostedOlympics': return geo?.sportsInfo.hostedOlympics;
+                    case 'hostedMWC': return geo?.sportsInfo.hostedMensWorldCup;
+                    case 'playedMWC': return geo?.sportsInfo.playedMensWorldCup;
+                    case 'wonMWC': return geo?.sportsInfo.wonMensWorldCup;
+                    case 't20WHS': return geo?.factsInfo.top20WorldHeritageSites;
+                    case 't20Tourism': return geo?.factsInfo.top20TourismRate;
+                    case 't20Rail': return geo?.factsInfo.top20RailSize;
+                    case 't20PopDensity': return geo?.factsInfo.top20PopulationDensity;
+                    case 'b20PopDensity': return geo?.factsInfo.bottom20PopulationDensity;
+                    case 't20Wheat': return geo?.economicInfo.top20WheatProduction;
+                    case 't20Oil': return geo?.economicInfo.top20OilProduction;
+                    case 't20Renewable': return geo?.economicInfo.top20RenewableElectricityProduction;
+                    case 't10Lakes': return geo?.geographyInfo.top10Lakes;
+                    case '50Skyscrapers': return geo?.factsInfo.has50Skyscrapers;
+                    case 't20Obesity': return geo?.factsInfo.top20ObesityRate;
+                    case 't20Alcohol': return geo?.factsInfo.top20AlcoholConsumption;
+                    case 't20Chocolate': return geo?.factsInfo.top20ChocolateConsumption;
                     default: return null;
                 }
             };
@@ -82,6 +117,15 @@ export default function GeoGridContent() {
             if (aVal == null && bVal == null) return 0;
             if (aVal == null) return 1;
             if (bVal == null) return -1;
+
+            // Boolean sorting: true before false, ties broken by country name
+            if (typeof aVal === 'boolean' && typeof bVal === 'boolean') {
+                if (aVal !== bVal) {
+                    const cmp = aVal ? -1 : 1;
+                    return sortConfig.direction === 'asc' ? cmp : -cmp;
+                }
+                return a.name.localeCompare(b.name);
+            }
 
             const cmp = typeof aVal === 'string' && typeof bVal === 'string'
                 ? aVal.localeCompare(bVal)
@@ -105,6 +149,7 @@ export default function GeoGridContent() {
 
             <div className="grow overflow-x-auto flex flex-col">
                 <div className="w-max border-b border-tertiary flex text-xs text-primary items-center break-words">
+                    <div className="w-8 flex-none text-center">#</div>
                     <div className="ml-19 w-36 flex-none mr-3">
                         <SortableColumnHeader label="Name / code" column="name" sortConfig={sortConfig} onSort={toggleSort} />
                     </div>
@@ -122,46 +167,44 @@ export default function GeoGridContent() {
                     <div className="w-14 flex-none mr-3">
                         Continent(s)
                     </div>
-                    <div className="w-20 flex-none mr-3">
-                        River systems
-                    </div>
+                    <SortableColumnHeader label="River systems" column="rivers" sortConfig={sortConfig} onSort={toggleSort} className="w-20 text-xs" />
                     <div className="w-20 flex-none mr-3">
                         Official lang(s)
                     </div>
-                    <GridBooleanLabel label="Landlocked" />
-                    <GridBooleanLabel label="Island nation" />
-                    <GridBooleanLabel label="Monarchy" />
-                    <GridBooleanLabel label="EU" />
-                    <GridBooleanLabel label="Cmlth." />
-                    <GridBooleanLabel label="USSR" />
-                    <GridBooleanLabel label="Nuc. power" />
-                    <GridBooleanLabel label="Nuc. weapons" />
-                    <GridBooleanLabel label="DST" />
-                    <GridBooleanLabel label="SSM legal" />
-                    <GridBooleanLabel label="SSA illegal" />
-                    <GridBooleanLabel label="Drives left" />
-                    <GridBooleanLabel label="Alc. ban" />
-                    <GridBooleanLabel label="Touches Sahara" />
-                    <GridBooleanLabel label="Touches equator" />
-                    <GridBooleanLabel label="Touches Eur. steppe" />
-                    <GridBooleanLabel label="Hosted F1" />
-                    <GridBooleanLabel label="Hosted olympics" />
-                    <GridBooleanLabel label="Hosted MWC" />
-                    <GridBooleanLabel label="Played MWC" />
-                    <GridBooleanLabel label="Won MWC" />
-                    <GridBooleanLabel label="T20 WHS" />
-                    <GridBooleanLabel label="T20 tourism" />
-                    <GridBooleanLabel label="T20 rail" />
-                    <GridBooleanLabel label="T20 pop. density" />
-                    <GridBooleanLabel label="B20 pop. density" />
-                    <GridBooleanLabel label="T20 wheat" />
-                    <GridBooleanLabel label="T20 oil" />
-                    <GridBooleanLabel label="T20 ren. energy" />
-                    <GridBooleanLabel label="T10 lakes" />
-                    <GridBooleanLabel label="50 skyscrapers" />
-                    <GridBooleanLabel label="T20 obesity" />
-                    <GridBooleanLabel label="T20 alcohol" />
-                    <GridBooleanLabel label="T20 choc." />
+                    <SortableBooleanLabel label="Landlocked" column="landlocked" sortConfig={sortConfig} onSort={toggleSort} />
+                    <SortableBooleanLabel label="Island nation" column="islandNation" sortConfig={sortConfig} onSort={toggleSort} />
+                    <SortableBooleanLabel label="Monarchy" column="monarchy" sortConfig={sortConfig} onSort={toggleSort} />
+                    <SortableBooleanLabel label="EU" column="eu" sortConfig={sortConfig} onSort={toggleSort} />
+                    <SortableBooleanLabel label="Cmlth." column="commonwealth" sortConfig={sortConfig} onSort={toggleSort} />
+                    <SortableBooleanLabel label="USSR" column="ussr" sortConfig={sortConfig} onSort={toggleSort} />
+                    <SortableBooleanLabel label="Nuc. power" column="nuclearPower" sortConfig={sortConfig} onSort={toggleSort} />
+                    <SortableBooleanLabel label="Nuc. weapons" column="nuclearWeapons" sortConfig={sortConfig} onSort={toggleSort} />
+                    <SortableBooleanLabel label="DST" column="dst" sortConfig={sortConfig} onSort={toggleSort} />
+                    <SortableBooleanLabel label="SSM legal" column="ssmLegal" sortConfig={sortConfig} onSort={toggleSort} />
+                    <SortableBooleanLabel label="SSA illegal" column="ssaIllegal" sortConfig={sortConfig} onSort={toggleSort} />
+                    <SortableBooleanLabel label="Drives left" column="drivesLeft" sortConfig={sortConfig} onSort={toggleSort} />
+                    <SortableBooleanLabel label="Alc. ban" column="alcoholBan" sortConfig={sortConfig} onSort={toggleSort} />
+                    <SortableBooleanLabel label="Touches Sahara" column="touchesSahara" sortConfig={sortConfig} onSort={toggleSort} />
+                    <SortableBooleanLabel label="Touches equator" column="touchesEquator" sortConfig={sortConfig} onSort={toggleSort} />
+                    <SortableBooleanLabel label="Touches Eur. steppe" column="touchesSteppe" sortConfig={sortConfig} onSort={toggleSort} />
+                    <SortableBooleanLabel label="Hosted F1" column="hostedF1" sortConfig={sortConfig} onSort={toggleSort} />
+                    <SortableBooleanLabel label="Hosted olympics" column="hostedOlympics" sortConfig={sortConfig} onSort={toggleSort} />
+                    <SortableBooleanLabel label="Hosted MWC" column="hostedMWC" sortConfig={sortConfig} onSort={toggleSort} />
+                    <SortableBooleanLabel label="Played MWC" column="playedMWC" sortConfig={sortConfig} onSort={toggleSort} />
+                    <SortableBooleanLabel label="Won MWC" column="wonMWC" sortConfig={sortConfig} onSort={toggleSort} />
+                    <SortableBooleanLabel label="T20 WHS" column="t20WHS" sortConfig={sortConfig} onSort={toggleSort} />
+                    <SortableBooleanLabel label="T20 tourism" column="t20Tourism" sortConfig={sortConfig} onSort={toggleSort} />
+                    <SortableBooleanLabel label="T20 rail" column="t20Rail" sortConfig={sortConfig} onSort={toggleSort} />
+                    <SortableBooleanLabel label="T20 pop. density" column="t20PopDensity" sortConfig={sortConfig} onSort={toggleSort} />
+                    <SortableBooleanLabel label="B20 pop. density" column="b20PopDensity" sortConfig={sortConfig} onSort={toggleSort} />
+                    <SortableBooleanLabel label="T20 wheat" column="t20Wheat" sortConfig={sortConfig} onSort={toggleSort} />
+                    <SortableBooleanLabel label="T20 oil" column="t20Oil" sortConfig={sortConfig} onSort={toggleSort} />
+                    <SortableBooleanLabel label="T20 ren. energy" column="t20Renewable" sortConfig={sortConfig} onSort={toggleSort} />
+                    <SortableBooleanLabel label="T10 lakes" column="t10Lakes" sortConfig={sortConfig} onSort={toggleSort} />
+                    <SortableBooleanLabel label="50 skyscrapers" column="50Skyscrapers" sortConfig={sortConfig} onSort={toggleSort} />
+                    <SortableBooleanLabel label="T20 obesity" column="t20Obesity" sortConfig={sortConfig} onSort={toggleSort} />
+                    <SortableBooleanLabel label="T20 alcohol" column="t20Alcohol" sortConfig={sortConfig} onSort={toggleSort} />
+                    <SortableBooleanLabel label="T20 choc." column="t20Chocolate" sortConfig={sortConfig} onSort={toggleSort} />
                 </div>
 
                 {!filtered ? (
@@ -170,7 +213,7 @@ export default function GeoGridContent() {
                     </div>
                 ) : (
                     <div className={'grow w-max bg-black/25 flex flex-col overflow-y-auto divide-y divide-tertiary transition duration-200' + (pending ? ' opacity-50' : '')}>
-                        {sortedFiltered!.map((c) => {
+                        {sortedFiltered!.map((c, i) => {
                             const geogridDetails = geogridDataRef.current[c.code];
                             const commonDetails = commonDataRef.current[c.code];
 
@@ -179,6 +222,9 @@ export default function GeoGridContent() {
                                     className="flex text-sm items-center hover:bg-tertiary/30"
                                     key={c.code}
                                 >
+                                    <div className="w-8 flex-none text-center text-xs text-secondary">
+                                        {i + 1}
+                                    </div>
                                     <img
                                         className="max-h-12 w-16 flex-none object-contain object-right py-0.5 mr-3"
                                         src={getFlagUrl(c.code)}
@@ -418,14 +464,25 @@ function GridArrayCell(props: GridArrayCellProps) {
     )
 }
 
-type GridBooleanLabelProps = {
-    label: string
+type SortableBooleanLabelProps = {
+    label: string,
+    column: string,
+    sortConfig: SortConfig,
+    onSort: (col: string) => void
 }
-function GridBooleanLabel(props: GridBooleanLabelProps) {
+function SortableBooleanLabel({ label, column, sortConfig, onSort }: SortableBooleanLabelProps) {
+    const isActive = sortConfig.column === column;
     return (
-        <div className="w-14 flex-none text-center">
-            {props.label}
-        </div>
+        <button
+            className="w-14 flex-none text-center cursor-pointer hover:text-white transition duration-150"
+            onClick={() => onSort(column)}
+            title={label}
+        >
+            {label}
+            <span className={'text-secondary ' + (isActive ? 'text-white' : '')}>
+                {isActive ? (sortConfig.direction === 'asc' ? ' ↑' : ' ↓') : ' ↕'}
+            </span>
+        </button>
     )
 }
 
