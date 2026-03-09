@@ -1,10 +1,20 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
+import { useEffect, useRef, useState, useTransition } from 'react';
 
 // Components
 import CenteredModal from '@/components/CenteredModal';
 import Spinner from '@/components/Spinner';
+
+// Utils
+import {
+    CommonCountryDetails,
+    CountryInfo,
+    fetchCommonData,
+    fetchCountries,
+    fetchGeogridData, GeogridCountryDetails,
+    getFlagUrl
+} from '@/app/geogrid/api';
 
 // Icons
 import { FaArrowUp, FaArrowDown, FaArrowsUpDown } from 'react-icons/fa6';
@@ -15,7 +25,7 @@ export default function GeoGridContent() {
     const geogridDataRef = useRef<{ [code: string]: GeogridCountryDetails }>({});
     const commonDataRef = useRef<{ [code: string]: CommonCountryDetails }>({});
 
-    const [filtered, setFiltered] = useState<CountryInfo[] | null>(null);
+    const [sorted, setSorted] = useState<CountryInfo[] | null>(null);
     const [pending, startTransition] = useTransition();
 
     const [query, setQuery] = useState('');
@@ -37,7 +47,7 @@ export default function GeoGridContent() {
             geogridDataRef.current = Object.fromEntries(geogrid.map((d, i) => [countries[i].code, d]));
             commonDataRef.current = Object.fromEntries(common.map((d, i) => [countries[i].code, d]));
 
-            setFiltered(countries);
+            setSorted(countries);
         }
 
         void fetchData();
@@ -436,138 +446,6 @@ function GridBooleanLabel(props: GridBooleanLabelProps) {
             {props.label}
         </div>
     )
-}
-
-type CountryInfo = {
-    code: string,
-    name: string,
-    longitude: number,
-    latitude: number,
-    names: { [lang: string]: string }
-}
-
-type GeogridCountryDetails = {
-    flagInfo: {
-        colorsOnFlag: string[],
-        hasStar: boolean,
-        hasCoatOfArms: boolean,
-        hasAnimal: boolean
-    },
-    geographyInfo: {
-        islandNation: boolean, //
-        landlocked: boolean, //
-        coastlineLength: number, //
-        coastline: string[],
-        touchesSahara: boolean, //
-        borderCountOverride: number,
-        rivers: string[], //
-        touchesEurasionSteppe: boolean, //
-        touchesEquator: boolean, //
-        top10Lakes: boolean //
-    },
-    economicInfo: {
-        HDI?: number, //
-        GDPPerCapita?: number, //
-        top20WheatProduction: boolean, //
-        top20OilProduction: boolean, //
-        top20RenewableElectricityProduction: boolean, //
-        producesNuclearPower: boolean //
-    },
-    politicalInfo: {
-        isMonarchy: boolean, //
-        inEU: boolean, //
-        hasNuclearWeapons: boolean, //
-        wasUSSR: boolean, //
-        inCommonwealth: boolean, //
-        officialLanguageCodes?: string[], //
-        timeZones: string[],
-        observesDST: boolean, //
-        sameSexMarriageLegal: boolean, //
-        sameSexActivitiesIllegal: boolean, //
-        CPI: number | null, //
-        isTerritory: boolean
-    },
-    sportsInfo: {
-        olympicMedals: number, //
-        hostedF1: boolean, //
-        hostedOlympics: boolean, //
-        hostedMensWorldCup: boolean, //
-        playedMensWorldCup: boolean, //
-        wonMensWorldCup: boolean //
-    },
-    factsInfo: {
-        drivesLeft: boolean, //
-        hasAlcoholBan: boolean, //
-        has50Skyscrapers: boolean, //
-        top20ObesityRate: boolean, //
-        top20ChocolateConsumption: boolean, //
-        top20AlcoholConsumption: boolean, //
-        top20PopulationDensity: boolean, //
-        bottom20PopulationDensity: boolean, //
-        top20TourismRate: boolean, //
-        top20RailSize: boolean, //
-        top20WorldHeritageSites: boolean, //
-        airPollution: number, //
-        co2Emissions: number //
-    }
-}
-
-type CommonCountryDetails = {
-    code: string,
-    latitude: number,
-    longitude: number,
-    name: string,
-    names: { [code: string]: string },
-    flags: string[], // For worldle
-    continent: string[],
-    borders: string[], // Country codes
-    autoUpdateBorders: true,
-    links: {
-        type: 'GoogleMaps' | 'Wikipedia',
-        url: string, // Includes ${cc}
-        languageCode: "en"
-    }[],
-    currencyData: {
-        code: string,
-        name: string,
-        nameChoices: string[], // For worldle
-    },
-    population: number,
-    size: number,
-    languageData: {
-        languageSources: { title: string, url: string }[],
-        languages: { languageCode: string, percentage: number }[]
-    },
-    productData: {
-        year: number,
-        totalValue: number,
-        topExports: {
-            productCode: string, // numerical ID
-            value: number
-        }[]
-    },
-    borderMode: "bordering",
-    images: { imageCode: number, sourceLink: number }[],
-    difficulty: 'easy' | 'hard'
-}
-
-async function fetchCountries(): Promise<CountryInfo[]> {
-    const res = await fetch('https://cdn-assets.teuteuf.fr/data/common/countries.json');
-    return res.json();
-}
-
-async function fetchGeogridData(code: string): Promise<GeogridCountryDetails> {
-    const res = await fetch(`https://cdn-assets.teuteuf.fr/data/geogrid/countries/${code.toLowerCase()}.json`);
-    return res.json();
-}
-
-async function fetchCommonData(code: string): Promise<CommonCountryDetails> {
-    const res = await fetch(`https://cdn-assets.teuteuf.fr/data/common/countries/${code.toLowerCase()}.json`);
-    return res.json();
-}
-
-function getFlagUrl(code: string) {
-    return `https://cdn-assets.teuteuf.fr/data/common/flags/${code.toLowerCase()}.svg`;
 }
 
 // https://stackoverflow.com/a/2901298
